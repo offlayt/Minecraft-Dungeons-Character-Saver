@@ -86,17 +86,17 @@ public sealed class MainForm : Form
         infoPanel.Controls.Add(profileLabel, 0, 0);
         infoPanel.Controls.Add(remoteLabel, 0, 1);
 
-        var pickerPanel = CreatePanel(196);
+        var pickerPanel = CreatePanel(212);
         pickerPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
         pickerPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
         pickerPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
-        pickerPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
+        pickerPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 50));
 
         pickerPanel.Controls.Add(AppTheme.Label("Branch and character", 14F, AppTheme.Text, FontStyle.Bold), 0, 0);
         pickerPanel.Controls.Add(CreateBranchRow(), 0, 1);
         pickerPanel.Controls.Add(CreateCharacterRow(), 0, 2);
 
-        modeLabel.Height = 30;
+        modeLabel.Height = 46;
         modeLabel.Margin = new Padding(0, 6, 0, 0);
         pickerPanel.Controls.Add(modeLabel, 0, 3);
 
@@ -636,14 +636,14 @@ public sealed class MainForm : Form
         if (string.Equals(branch, settings.Branch, StringComparison.OrdinalIgnoreCase))
         {
             var suggestion = GetSelectedCharacter() is { } selected
-                ? $" Save character will use/create {CharacterFile.CreateBranchName(selected.FileName)}."
+                ? $" Character save -> {CharacterFile.CreateBranchName(selected.FileName)}."
                 : "";
-            modeLabel.Text = $"Mode: full profile on {settings.Branch}.{suggestion}";
+            modeLabel.Text = $"Mode: full profile ({settings.Branch}).{suggestion}";
             return;
         }
 
         modeLabel.Text = GetSelectedCharacter() is { } characterFile
-            ? $"Mode: character branch {branch} -> {CharacterFile.CreateRemotePath(characterFile.FileName)}"
+            ? $"Mode: character branch {branch} -> {characterFile.FileName}"
             : $"Mode: character branch {branch}. Select a .dat file.";
     }
 

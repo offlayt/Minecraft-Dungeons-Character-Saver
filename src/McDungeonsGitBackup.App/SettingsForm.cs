@@ -19,7 +19,7 @@ public sealed class SettingsForm : Form
         this.settingsStore = settingsStore;
         this.credentialStore = credentialStore;
 
-        Text = "Настройки";
+        Text = "Settings";
         Width = 980;
         Height = 560;
         MinimumSize = new Size(900, 520);
@@ -52,17 +52,17 @@ public sealed class SettingsForm : Form
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         layout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 150));
 
-        AddRow(layout, 0, "Владелец GitHub", ownerBox);
-        AddRow(layout, 1, "Репозиторий", repoBox);
-        AddRow(layout, 2, "Ветка", branchBox);
-        AddRow(layout, 3, "Путь в GitHub", remotePathBox);
-        AddRow(layout, 4, "Папка сейва", localPathBox, CreateButton("Выбрать", BrowseLocalPath));
+        AddRow(layout, 0, "GitHub owner", ownerBox);
+        AddRow(layout, 1, "Repository", repoBox);
+        AddRow(layout, 2, "Main branch", branchBox);
+        AddRow(layout, 3, "GitHub path", remotePathBox);
+        AddRow(layout, 4, "Save folder", localPathBox, CreateButton("Browse", BrowseLocalPath));
         AddRow(layout, 5, "GitHub token", tokenBox);
 
-        var autoDetectButton = CreateButton("Найти сейвы", AutoDetectSaves);
-        var testButton = CreateButton("Проверить GitHub", async () => await TestConnectionAsync());
-        var saveButton = CreateButton("Сохранить", SaveSettings);
-        var cancelButton = CreateButton("Отмена", () => DialogResult = DialogResult.Cancel);
+        var autoDetectButton = CreateButton("Auto-detect", AutoDetectSaves);
+        var testButton = CreateButton("Test GitHub", async () => await TestConnectionAsync());
+        var saveButton = CreateButton("Save", SaveSettings);
+        var cancelButton = CreateButton("Cancel", () => DialogResult = DialogResult.Cancel);
 
         var buttonPanel = new FlowLayoutPanel
         {
