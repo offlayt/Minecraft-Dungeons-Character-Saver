@@ -8,18 +8,19 @@ public sealed class MainForm : Form
     private readonly ICredentialStore credentialStore;
     private readonly ArchiveService archiveService = new();
     private readonly GameProcessGuard processGuard = new();
+
     private readonly Button saveAllButton;
+    private readonly Button settingsButton;
     private readonly Button pushCharacterButton;
     private readonly Button restoreButton;
-    private readonly Button settingsButton;
     private readonly Button refreshCharactersButton;
     private readonly Button refreshBranchesButton;
     private readonly Label profileLabel = CreateInfoLabel();
     private readonly Label remoteLabel = CreateInfoLabel();
-    private readonly Label branchInfoLabel = CreateInfoLabel(AppTheme.Gold, FontStyle.Bold);
+    private readonly Label modeLabel = CreateInfoLabel(AppTheme.Gold, FontStyle.Bold);
     private readonly Label statusLabel = CreateInfoLabel(AppTheme.MutedText);
-    private readonly ComboBox characterBox = new();
     private readonly ComboBox branchBox = new();
+    private readonly ComboBox characterBox = new();
 
     private AppSettings settings;
     private IReadOnlyList<CharacterFile> characters = [];
@@ -30,17 +31,17 @@ public sealed class MainForm : Form
         this.credentialStore = credentialStore;
         settings = settingsStore.Load();
 
-        saveAllButton = AppTheme.Button("Сохранить всё в main", AppTheme.Emerald);
-        settingsButton = AppTheme.Button("Настройки", AppTheme.Border);
-        pushCharacterButton = AppTheme.Button("Сохранить выбранного персонажа", AppTheme.Gold);
-        restoreButton = AppTheme.Button("Восстановить из текущей ветки", AppTheme.Redstone);
-        refreshCharactersButton = AppTheme.Button("Обновить", AppTheme.Border);
-        refreshBranchesButton = AppTheme.Button("Обновить ветки", AppTheme.Border);
+        saveAllButton = AppTheme.Button("Save all", AppTheme.Emerald);
+        settingsButton = AppTheme.Button("Settings", AppTheme.Border);
+        pushCharacterButton = AppTheme.Button("Save character", AppTheme.Gold);
+        restoreButton = AppTheme.Button("Restore current", AppTheme.Redstone);
+        refreshCharactersButton = AppTheme.Button("Characters", AppTheme.Border);
+        refreshBranchesButton = AppTheme.Button("Branches", AppTheme.Border);
 
-        Text = "Minecraft Dungeons Git Backup";
-        Width = 1120;
-        Height = 760;
-        MinimumSize = new Size(980, 680);
+        Text = "Minecraft Dungeons Character Saver";
+        Width = 1040;
+        Height = 620;
+        MinimumSize = new Size(900, 560);
         StartPosition = FormStartPosition.CenterScreen;
         AppTheme.StyleForm(this);
 
@@ -54,20 +55,18 @@ public sealed class MainForm : Form
         {
             Dock = DockStyle.Fill,
             ColumnCount = 1,
-            RowCount = 6,
-            Padding = new Padding(32),
-            BackColor = AppTheme.Background,
-            AutoScroll = true
+            RowCount = 5,
+            Padding = new Padding(22),
+            BackColor = AppTheme.Background
         };
-        root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 
-        var title = AppTheme.Label("Minecraft Dungeons Backup", 28F, AppTheme.Text, FontStyle.Bold);
-        var subtitle = AppTheme.Label("Выбери ветку: main работает со всем профилем, остальные ветки - с выбранным персонажем.", 12F, AppTheme.MutedText);
+        var title = AppTheme.Label("Minecraft Dungeons Character Saver", 23F, AppTheme.Text, FontStyle.Bold);
+        var subtitle = AppTheme.Label("Main = full backup. Character branches are created automatically from the selected .dat file.", 10F, AppTheme.MutedText);
 
         var header = new FlowLayoutPanel
         {
@@ -75,78 +74,40 @@ public sealed class MainForm : Form
             FlowDirection = FlowDirection.TopDown,
             WrapContents = false,
             AutoSize = true,
-            Margin = new Padding(0, 0, 0, 22),
+            Margin = new Padding(0, 0, 0, 14),
             BackColor = AppTheme.Background
         };
         header.Controls.Add(title);
         header.Controls.Add(subtitle);
 
-        var infoPanel = CreatePanel();
+        var infoPanel = CreatePanel(84);
         infoPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         infoPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
         infoPanel.Controls.Add(profileLabel, 0, 0);
         infoPanel.Controls.Add(remoteLabel, 0, 1);
 
-        var branchPanel = CreatePanel();
-        branchPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        branchPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        branchPanel.Controls.Add(AppTheme.Label("Текущая ветка", 17F, AppTheme.Text, FontStyle.Bold), 0, 0);
+        var pickerPanel = CreatePanel(196);
+        pickerPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
+        pickerPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
+        pickerPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
+        pickerPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 34));
 
-        var branchRow = CreateTwoColumnRow(190);
-        branchBox.DropDownStyle = ComboBoxStyle.DropDown;
-        branchBox.BackColor = Color.FromArgb(20, 22, 24);
-        branchBox.ForeColor = AppTheme.Text;
-        branchBox.FlatStyle = FlatStyle.Flat;
-        branchBox.Font = AppTheme.MainFont(12F);
-        branchBox.Dock = DockStyle.Fill;
-        branchBox.Height = 42;
-        branchBox.Margin = new Padding(0, 6, 14, 0);
-        branchBox.TextChanged += (_, _) => RefreshBranchInfo();
+        pickerPanel.Controls.Add(AppTheme.Label("Branch and character", 14F, AppTheme.Text, FontStyle.Bold), 0, 0);
+        pickerPanel.Controls.Add(CreateBranchRow(), 0, 1);
+        pickerPanel.Controls.Add(CreateCharacterRow(), 0, 2);
 
-        refreshBranchesButton.Width = 176;
-        refreshBranchesButton.Click += async (_, _) => await LoadBranchesAsync();
-
-        branchRow.Controls.Add(branchBox, 0, 0);
-        branchRow.Controls.Add(refreshBranchesButton, 1, 0);
-        branchPanel.Controls.Add(branchRow, 0, 1);
-
-        var characterPanel = CreatePanel();
-        characterPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        characterPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        characterPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-        characterPanel.Controls.Add(AppTheme.Label("Выбранный персонаж", 17F, AppTheme.Text, FontStyle.Bold), 0, 0);
-
-        var characterRow = CreateTwoColumnRow(150);
-        characterBox.DropDownStyle = ComboBoxStyle.DropDownList;
-        characterBox.BackColor = Color.FromArgb(20, 22, 24);
-        characterBox.ForeColor = AppTheme.Text;
-        characterBox.FlatStyle = FlatStyle.Flat;
-        characterBox.Font = AppTheme.MainFont(12F);
-        characterBox.Dock = DockStyle.Fill;
-        characterBox.Height = 42;
-        characterBox.Margin = new Padding(0, 6, 14, 0);
-        characterBox.SelectedIndexChanged += (_, _) => RefreshBranchInfo();
-
-        refreshCharactersButton.Width = 136;
-        refreshCharactersButton.Click += (_, _) => LoadCharacters();
-
-        characterRow.Controls.Add(characterBox, 0, 0);
-        characterRow.Controls.Add(refreshCharactersButton, 1, 0);
-
-        branchInfoLabel.Margin = new Padding(0, 14, 0, 0);
-        branchInfoLabel.Height = 56;
-        characterPanel.Controls.Add(characterRow, 0, 1);
-        characterPanel.Controls.Add(branchInfoLabel, 0, 2);
+        modeLabel.Height = 30;
+        modeLabel.Margin = new Padding(0, 6, 0, 0);
+        pickerPanel.Controls.Add(modeLabel, 0, 3);
 
         var buttons = new TableLayoutPanel
         {
             Dock = DockStyle.Fill,
             ColumnCount = 2,
             RowCount = 2,
-            AutoSize = false,
-            Height = 150,
+            Height = 116,
             BackColor = AppTheme.Background,
-            Margin = new Padding(0, 18, 0, 18)
+            Margin = new Padding(0, 12, 0, 12)
         };
         buttons.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
         buttons.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50));
@@ -157,10 +118,10 @@ public sealed class MainForm : Form
         settingsButton.Dock = DockStyle.Fill;
         pushCharacterButton.Dock = DockStyle.Fill;
         restoreButton.Dock = DockStyle.Fill;
-        saveAllButton.Margin = new Padding(0, 0, 10, 10);
-        settingsButton.Margin = new Padding(0, 10, 10, 0);
-        pushCharacterButton.Margin = new Padding(10, 0, 0, 10);
-        restoreButton.Margin = new Padding(10, 10, 0, 0);
+        saveAllButton.Margin = new Padding(0, 0, 8, 8);
+        settingsButton.Margin = new Padding(0, 8, 8, 0);
+        pushCharacterButton.Margin = new Padding(8, 0, 0, 8);
+        restoreButton.Margin = new Padding(8, 8, 0, 0);
 
         saveAllButton.Click += async (_, _) => await RunSaveAllAsync();
         settingsButton.Click += (_, _) => OpenSettings();
@@ -173,27 +134,68 @@ public sealed class MainForm : Form
         buttons.Controls.Add(restoreButton, 1, 1);
 
         statusLabel.Dock = DockStyle.Fill;
-        statusLabel.Height = 56;
+        statusLabel.Height = 42;
         statusLabel.TextAlign = ContentAlignment.MiddleLeft;
 
         root.Controls.Add(header, 0, 0);
         root.Controls.Add(infoPanel, 0, 1);
-        root.Controls.Add(branchPanel, 0, 2);
-        root.Controls.Add(characterPanel, 0, 3);
-        root.Controls.Add(buttons, 0, 4);
-        root.Controls.Add(statusLabel, 0, 5);
+        root.Controls.Add(pickerPanel, 0, 2);
+        root.Controls.Add(buttons, 0, 3);
+        root.Controls.Add(statusLabel, 0, 4);
         Controls.Add(root);
     }
 
-    private static TableLayoutPanel CreatePanel()
+    private Control CreateBranchRow()
+    {
+        var row = CreateTwoColumnRow(128);
+        branchBox.DropDownStyle = ComboBoxStyle.DropDown;
+        branchBox.BackColor = Color.FromArgb(20, 22, 24);
+        branchBox.ForeColor = AppTheme.Text;
+        branchBox.FlatStyle = FlatStyle.Flat;
+        branchBox.Font = AppTheme.MainFont(11F);
+        branchBox.Dock = DockStyle.Fill;
+        branchBox.Margin = new Padding(0, 5, 10, 5);
+        branchBox.TextChanged += (_, _) => RefreshModeLabel();
+
+        refreshBranchesButton.Width = 118;
+        refreshBranchesButton.Height = 38;
+        refreshBranchesButton.Click += async (_, _) => await LoadBranchesAsync();
+
+        row.Controls.Add(branchBox, 0, 0);
+        row.Controls.Add(refreshBranchesButton, 1, 0);
+        return row;
+    }
+
+    private Control CreateCharacterRow()
+    {
+        var row = CreateTwoColumnRow(128);
+        characterBox.DropDownStyle = ComboBoxStyle.DropDownList;
+        characterBox.BackColor = Color.FromArgb(20, 22, 24);
+        characterBox.ForeColor = AppTheme.Text;
+        characterBox.FlatStyle = FlatStyle.Flat;
+        characterBox.Font = AppTheme.MainFont(11F);
+        characterBox.Dock = DockStyle.Fill;
+        characterBox.Margin = new Padding(0, 5, 10, 5);
+        characterBox.SelectedIndexChanged += (_, _) => RefreshModeLabel();
+
+        refreshCharactersButton.Width = 118;
+        refreshCharactersButton.Height = 38;
+        refreshCharactersButton.Click += (_, _) => LoadCharacters();
+
+        row.Controls.Add(characterBox, 0, 0);
+        row.Controls.Add(refreshCharactersButton, 1, 0);
+        return row;
+    }
+
+    private static TableLayoutPanel CreatePanel(int height)
     {
         return new TableLayoutPanel
         {
             Dock = DockStyle.Top,
             ColumnCount = 1,
-            AutoSize = true,
-            Padding = new Padding(24),
-            Margin = new Padding(0, 0, 0, 18),
+            Height = height,
+            Padding = new Padding(16),
+            Margin = new Padding(0, 0, 0, 12),
             BackColor = AppTheme.Surface
         };
     }
@@ -205,10 +207,8 @@ public sealed class MainForm : Form
             Dock = DockStyle.Fill,
             ColumnCount = 2,
             RowCount = 1,
-            AutoSize = false,
-            Height = 56,
             BackColor = AppTheme.Surface,
-            Margin = new Padding(0, 14, 0, 0)
+            Margin = new Padding(0)
         };
         row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
         row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, rightColumnWidth));
@@ -221,10 +221,10 @@ public sealed class MainForm : Form
         {
             AutoSize = false,
             Dock = DockStyle.Top,
-            Height = 28,
+            Height = 24,
             AutoEllipsis = true,
             ForeColor = color ?? AppTheme.MutedText,
-            Font = AppTheme.MainFont(10.5F, style),
+            Font = AppTheme.MainFont(9.5F, style),
             TextAlign = ContentAlignment.MiddleLeft
         };
     }
@@ -238,22 +238,21 @@ public sealed class MainForm : Form
 
         if (processGuard.IsGameRunning(out var processes))
         {
-            ShowError($"Сначала закрой Minecraft Dungeons. Запущен процесс: {processes}");
+            ShowError($"Close Minecraft Dungeons first. Running process: {processes}");
             return;
         }
 
-        await RunBusyAsync("Создаю полный архив сейва...", async cancellationToken =>
+        await RunBusyAsync("Creating full save archive...", async cancellationToken =>
         {
             var archivePath = Path.Combine(Path.GetTempPath(), $"mcd-backup-{Guid.NewGuid():N}.zip");
             try
             {
                 var manifest = await archiveService.CreateBackupArchiveAsync(settings.LocalSaveProfilePath, archivePath, cancellationToken);
-                SetStatus($"Загружаю полный сейв в {settings.Branch}...");
                 using var httpClient = new HttpClient();
                 var client = new GitHubContentClient(httpClient, settings, token);
                 await client.UploadFileAsync(archivePath, settings.RemotePath, settings.Branch, $"Minecraft Dungeons full backup {DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss}", cancellationToken);
                 SelectBranch(settings.Branch);
-                SetStatus($"Готово: полный бэкап загружен в {settings.Branch}. Файлов: {manifest.Files.Count}.");
+                SetStatus($"Full backup uploaded to {settings.Branch}. Files: {manifest.Files.Count}.");
             }
             finally
             {
@@ -271,26 +270,20 @@ public sealed class MainForm : Form
 
         if (GetSelectedCharacter() is not { } character)
         {
-            ShowError("Сначала выбери .dat персонажа.");
+            ShowError("Select a character .dat file first.");
             return;
         }
 
         if (processGuard.IsGameRunning(out var processes))
         {
-            ShowError($"Сначала закрой Minecraft Dungeons. Запущен процесс: {processes}");
+            ShowError($"Close Minecraft Dungeons first. Running process: {processes}");
             return;
         }
 
-        var branch = GetSelectedBranch();
-        if (string.Equals(branch, settings.Branch, StringComparison.OrdinalIgnoreCase))
-        {
-            ShowError($"Для выбранного персонажа выбери или впиши отдельную ветку, например {CharacterFile.CreateBranchName(character.FileName)}. Ветка {settings.Branch} хранит полный архив.");
-            return;
-        }
-
+        var branch = ResolveCharacterBranch(character);
         var remotePath = CharacterFile.CreateRemotePath(character.FileName);
 
-        await RunBusyAsync($"Загружаю {character.FileName} в {branch}...", async cancellationToken =>
+        await RunBusyAsync($"Uploading {character.FileName} to {branch}...", async cancellationToken =>
         {
             using var httpClient = new HttpClient();
             var client = new GitHubContentClient(httpClient, settings, token);
@@ -300,8 +293,9 @@ public sealed class MainForm : Form
                 remotePath,
                 $"Minecraft Dungeons character backup {character.FileName} {DateTimeOffset.Now:yyyy-MM-dd HH:mm:ss}",
                 cancellationToken);
+            AddBranchIfMissing(branch);
             SelectBranch(branch);
-            SetStatus($"Готово: персонаж загружен. Ветка: {branch}. Файл: {remotePath}");
+            SetStatus($"Character uploaded. Branch: {branch}. File: {remotePath}");
         });
     }
 
@@ -326,14 +320,14 @@ public sealed class MainForm : Form
 
         if (processGuard.IsGameRunning(out var processes))
         {
-            ShowError($"Сначала закрой Minecraft Dungeons. Запущен процесс: {processes}");
+            ShowError($"Close Minecraft Dungeons first. Running process: {processes}");
             return;
         }
 
         var confirm = MessageBox.Show(
             this,
-            "Будет восстановлен полный архив из main. Текущая папка сейва сначала будет сохранена в локальный pre-restore backup.",
-            "Восстановить полный сейв",
+            "This restores the full main backup. Current local saves will be backed up first.",
+            "Restore full save",
             MessageBoxButtons.OKCancel,
             MessageBoxIcon.Warning);
 
@@ -342,7 +336,7 @@ public sealed class MainForm : Form
             return;
         }
 
-        await RunBusyAsync("Скачиваю полный архив из GitHub...", async cancellationToken =>
+        await RunBusyAsync("Downloading full backup...", async cancellationToken =>
         {
             var archivePath = Path.Combine(Path.GetTempPath(), $"mcd-restore-{Guid.NewGuid():N}.zip");
             try
@@ -351,7 +345,6 @@ public sealed class MainForm : Form
                 var client = new GitHubContentClient(httpClient, settings, token);
                 await client.DownloadFileAsync(settings.RemotePath, settings.Branch, archivePath, cancellationToken);
 
-                SetStatus("Проверяю архив и восстанавливаю сейвы...");
                 var result = await archiveService.RestoreArchiveAsync(
                     archivePath,
                     settings.LocalSaveProfilePath,
@@ -359,10 +352,7 @@ public sealed class MainForm : Form
                     cancellationToken);
 
                 LoadCharacters();
-                var backupText = result.PreRestoreBackupPath is null
-                    ? "Локальных файлов до восстановления не было."
-                    : $"Локальный pre-restore backup: {result.PreRestoreBackupPath}";
-                SetStatus($"Готово: восстановлено файлов: {result.Manifest.Files.Count}. {backupText}");
+                SetStatus($"Full restore complete. Files: {result.Manifest.Files.Count}.");
             }
             finally
             {
@@ -380,20 +370,20 @@ public sealed class MainForm : Form
 
         if (GetSelectedCharacter() is not { } character)
         {
-            ShowError("Сначала выбери локальный .dat персонажа, который нужно заменить.");
+            ShowError("Select the local .dat character to replace.");
             return;
         }
 
         if (processGuard.IsGameRunning(out var processes))
         {
-            ShowError($"Сначала закрой Minecraft Dungeons. Запущен процесс: {processes}");
+            ShowError($"Close Minecraft Dungeons first. Running process: {processes}");
             return;
         }
 
         var confirm = MessageBox.Show(
             this,
-            $"Будет восстановлен персонаж {character.FileName} из ветки {branch}. Текущий локальный .dat будет сохранен рядом с pre-restore backups.",
-            "Восстановить персонажа",
+            $"This restores {character.FileName} from branch {branch}. The current local .dat will be backed up first.",
+            "Restore character",
             MessageBoxButtons.OKCancel,
             MessageBoxIcon.Warning);
 
@@ -402,7 +392,7 @@ public sealed class MainForm : Form
             return;
         }
 
-        await RunBusyAsync($"Скачиваю персонажа из {branch}...", async cancellationToken =>
+        await RunBusyAsync($"Downloading character from {branch}...", async cancellationToken =>
         {
             var tempPath = Path.Combine(Path.GetTempPath(), $"mcd-character-{Guid.NewGuid():N}.dat");
             try
@@ -427,7 +417,7 @@ public sealed class MainForm : Form
 
                 File.Copy(tempPath, targetPath, overwrite: true);
                 LoadCharacters();
-                SetStatus($"Готово: {character.FileName} восстановлен из ветки {branch}.");
+                SetStatus($"{character.FileName} restored from {branch}.");
             }
             finally
             {
@@ -443,7 +433,7 @@ public sealed class MainForm : Form
             return;
         }
 
-        await RunBusyAsync("Загружаю список веток...", async cancellationToken =>
+        await RunBusyAsync("Loading branches...", async cancellationToken =>
         {
             using var httpClient = new HttpClient();
             var client = new GitHubContentClient(httpClient, settings, token);
@@ -451,7 +441,7 @@ public sealed class MainForm : Form
             var branches = await client.ListBranchesAsync(cancellationToken);
             SetBranchItems(branches);
             SelectBranch(branches.Contains(currentBranch, StringComparer.OrdinalIgnoreCase) ? currentBranch : settings.Branch);
-            SetStatus($"Ветки обновлены: {branches.Count}.");
+            SetStatus($"Branches loaded: {branches.Count}.");
         });
     }
 
@@ -462,7 +452,7 @@ public sealed class MainForm : Form
         {
             settings = settingsStore.Load();
             RefreshState();
-            SetStatus("Настройки сохранены.");
+            SetStatus("Settings saved.");
         }
     }
 
@@ -536,15 +526,15 @@ public sealed class MainForm : Form
     private void RefreshState()
     {
         profileLabel.Text = string.IsNullOrWhiteSpace(settings.LocalSaveProfilePath)
-            ? "Профиль сейва: не выбран"
-            : $"Профиль сейва: {settings.LocalSaveProfilePath}";
+            ? "Save profile: not selected"
+            : $"Save profile: {settings.LocalSaveProfilePath}";
         remoteLabel.Text = string.IsNullOrWhiteSpace(settings.Owner) || string.IsNullOrWhiteSpace(settings.Repo)
-            ? "GitHub: не настроен"
+            ? "GitHub: not configured"
             : $"GitHub: {settings.Owner}/{settings.Repo}@{settings.Branch} / {settings.RemotePath}";
         SetBranchItems([settings.Branch]);
         SelectBranch(string.IsNullOrWhiteSpace(branchBox.Text) ? settings.Branch : branchBox.Text);
         LoadCharacters();
-        statusLabel.Text = "Готово к работе.";
+        statusLabel.Text = "Ready.";
     }
 
     private void LoadCharacters()
@@ -568,7 +558,8 @@ public sealed class MainForm : Form
             characterBox.EndUpdate();
         }
 
-        RefreshBranchInfo();
+        AddSuggestedBranchForSelectedCharacter();
+        RefreshModeLabel();
     }
 
     private void SetBranchItems(IReadOnlyList<string> branches)
@@ -589,12 +580,31 @@ public sealed class MainForm : Form
         }
 
         branchBox.Text = string.IsNullOrWhiteSpace(currentText) ? settings.Branch : currentText;
+        AddSuggestedBranchForSelectedCharacter();
     }
 
     private void SelectBranch(string branch)
     {
         branchBox.Text = string.IsNullOrWhiteSpace(branch) ? settings.Branch : branch;
-        RefreshBranchInfo();
+        RefreshModeLabel();
+    }
+
+    private void AddSuggestedBranchForSelectedCharacter()
+    {
+        if (GetSelectedCharacter() is not { } character)
+        {
+            return;
+        }
+
+        AddBranchIfMissing(CharacterFile.CreateBranchName(character.FileName));
+    }
+
+    private void AddBranchIfMissing(string branch)
+    {
+        if (!branchBox.Items.Cast<object>().Any(item => string.Equals(item.ToString(), branch, StringComparison.OrdinalIgnoreCase)))
+        {
+            branchBox.Items.Add(branch);
+        }
     }
 
     private string GetSelectedBranch()
@@ -602,33 +612,45 @@ public sealed class MainForm : Form
         return string.IsNullOrWhiteSpace(branchBox.Text) ? settings.Branch : branchBox.Text.Trim();
     }
 
+    private string ResolveCharacterBranch(CharacterFile character)
+    {
+        var branch = GetSelectedBranch();
+        return string.Equals(branch, settings.Branch, StringComparison.OrdinalIgnoreCase)
+            ? CharacterFile.CreateBranchName(character.FileName)
+            : branch;
+    }
+
     private CharacterFile? GetSelectedCharacter()
     {
         return characterBox.SelectedItem as CharacterFile;
     }
 
-    private void RefreshBranchInfo()
+    private void RefreshModeLabel()
     {
         var branch = GetSelectedBranch();
+        if (GetSelectedCharacter() is { } character)
+        {
+            AddBranchIfMissing(CharacterFile.CreateBranchName(character.FileName));
+        }
+
         if (string.Equals(branch, settings.Branch, StringComparison.OrdinalIgnoreCase))
         {
-            branchInfoLabel.Text = $"Текущий режим: полный профиль. Restore восстановит архив {settings.RemotePath} из {settings.Branch}.";
+            var suggestion = GetSelectedCharacter() is { } selected
+                ? $" Save character will use/create {CharacterFile.CreateBranchName(selected.FileName)}."
+                : "";
+            modeLabel.Text = $"Mode: full profile on {settings.Branch}.{suggestion}";
             return;
         }
 
-        if (GetSelectedCharacter() is not { } character)
-        {
-            branchInfoLabel.Text = $"Текущий режим: ветка {branch}. Выбери .dat персонажа для save/restore.";
-            return;
-        }
-
-        branchInfoLabel.Text = $"Текущий режим: персонаж. Ветка: {branch} | Файл: {CharacterFile.CreateRemotePath(character.FileName)}";
+        modeLabel.Text = GetSelectedCharacter() is { } characterFile
+            ? $"Mode: character branch {branch} -> {CharacterFile.CreateRemotePath(characterFile.FileName)}"
+            : $"Mode: character branch {branch}. Select a .dat file.";
     }
 
     private void ShowError(string message)
     {
         SetStatus(message);
-        MessageBox.Show(this, message, "Minecraft Dungeons Git Backup", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        MessageBox.Show(this, message, "Minecraft Dungeons Character Saver", MessageBoxButtons.OK, MessageBoxIcon.Error);
     }
 
     private void SetStatus(string message)

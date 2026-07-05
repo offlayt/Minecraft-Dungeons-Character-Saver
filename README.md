@@ -6,6 +6,7 @@ The app is built around a simple branch model:
 
 - `main` stores the full save profile as one validated zip archive.
 - Any other branch stores the selected character `.dat` file.
+- If `main` is selected and you click `Save character`, the app automatically creates or updates the character branch for the selected `.dat` file.
 - Restoring from `main` restores all saves.
 - Restoring from any other branch restores only the selected character.
 
@@ -17,8 +18,9 @@ The app is built around a simple branch model:
 - Lets you select or type the current GitHub branch.
 - Loads branch names from GitHub.
 - Saves the whole profile to `main`.
-- Saves the selected character to the currently selected non-main branch.
+- Saves the selected character to the current branch, or to the auto-generated character branch when `main` is selected.
 - Creates a new character branch from `main` if it does not exist yet.
+- Suggests the character branch for the currently selected `.dat` file.
 - Restores all saves from `main`.
 - Restores one selected character from the currently selected non-main branch.
 - Creates local pre-restore backups before replacing files.
@@ -60,7 +62,7 @@ The local save path should be the folder that contains the `Characters` director
 ### Save All
 
 1. Select `main` as the current branch.
-2. Click `Save all to main`.
+2. Click `Save all`.
 
 The app zips the whole selected save profile, adds `backup-manifest.json`, and uploads the archive to:
 
@@ -77,7 +79,13 @@ character/hero-one
 ```
 
 2. Select the local `.dat` character.
-3. Click `Save selected character`.
+3. Click `Save character`.
+
+You can also leave `main` selected. In that case `Save character` automatically uses or creates:
+
+```text
+character/<selected-dat-filename>
+```
 
 The app uploads the selected file to:
 
@@ -87,7 +95,7 @@ The app uploads the selected file to:
 
 ### Restore
 
-Click `Restore from current branch`.
+Click `Restore current`.
 
 If the current branch is `main`, the app downloads and restores the full zip archive.
 
