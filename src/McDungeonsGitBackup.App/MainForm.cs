@@ -40,8 +40,8 @@ public sealed class MainForm : Form
 
         Text = "Minecraft Dungeons Character Saver";
         Width = 1040;
-        Height = 620;
-        MinimumSize = new Size(900, 560);
+        Height = 700;
+        MinimumSize = new Size(900, 640);
         StartPosition = FormStartPosition.CenterScreen;
         AppTheme.StyleForm(this);
 
@@ -86,17 +86,17 @@ public sealed class MainForm : Form
         infoPanel.Controls.Add(profileLabel, 0, 0);
         infoPanel.Controls.Add(remoteLabel, 0, 1);
 
-        var pickerPanel = CreatePanel(212);
+        var pickerPanel = CreatePanel(250);
         pickerPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 44));
         pickerPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
         pickerPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 48));
-        pickerPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 50));
+        pickerPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 88));
 
         pickerPanel.Controls.Add(AppTheme.Label("Branch and character", 14F, AppTheme.Text, FontStyle.Bold), 0, 0);
         pickerPanel.Controls.Add(CreateBranchRow(), 0, 1);
         pickerPanel.Controls.Add(CreateCharacterRow(), 0, 2);
 
-        modeLabel.Height = 46;
+        modeLabel.Height = 82;
         modeLabel.Margin = new Padding(0, 6, 0, 0);
         pickerPanel.Controls.Add(modeLabel, 0, 3);
 
