@@ -128,11 +128,43 @@ Run tests:
 dotnet run --project tests\McDungeonsGitBackup.Tests\McDungeonsGitBackup.Tests.csproj
 ```
 
-Publish:
+Publish normal portable exe:
 
 ```powershell
-dotnet publish src\McDungeonsGitBackup.App\McDungeonsGitBackup.App.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o outputs\McDungeonsGitBackup-wide
+dotnet publish src\McDungeonsGitBackup.App\McDungeonsGitBackup.App.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:EnableCompressionInSingleFile=false -o outputs\McDungeonsGitBackup-normal
 ```
+
+This is the classic self-contained build. It runs without installing .NET, but the file is larger.
+
+Publish smaller portable exe:
+
+```powershell
+dotnet publish src\McDungeonsGitBackup.App\McDungeonsGitBackup.App.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -o outputs\McDungeonsGitBackup-portable
+```
+
+This is the recommended release build. It is self-contained, compressed, and runs on another Windows PC without installing the .NET SDK or runtime.
+
+Publish lite exe:
+
+```powershell
+dotnet publish src\McDungeonsGitBackup.App\McDungeonsGitBackup.App.csproj -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true -o outputs\McDungeonsGitBackup-lite
+```
+
+The small build is much lighter, but the target PC must have the [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0) installed.
+
+Size notes from the current project:
+
+- old uncompressed portable exe: about 154 MB
+- compressed portable exe: about 68 MB
+- framework-dependent lite exe: about 0.3 MB
+
+Trimming is not enabled because Windows Forms is not supported with `PublishTrimmed` and the SDK blocks that publish mode.
+
+Release assets use these names:
+
+- `McDungeonsGitBackup-normal.exe` - normal self-contained build, largest file.
+- `McDungeonsGitBackup-portable-small.exe` - recommended self-contained compressed build.
+- `McDungeonsGitBackup-lite.exe` - smallest build, requires .NET 8 Desktop Runtime.
 
 ## Project Layout
 

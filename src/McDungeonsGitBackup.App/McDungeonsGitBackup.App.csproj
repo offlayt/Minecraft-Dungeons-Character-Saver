@@ -9,6 +9,12 @@
     <RootNamespace>McDungeonsGitBackup.App</RootNamespace>
   </PropertyGroup>
 
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+    <EnableCompressionInSingleFile Condition="'$(SelfContained)' == 'true'">true</EnableCompressionInSingleFile>
+  </PropertyGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\McDungeonsGitBackup.Core\McDungeonsGitBackup.Core.csproj" />
   </ItemGroup>
