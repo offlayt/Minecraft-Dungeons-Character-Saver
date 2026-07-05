@@ -1,0 +1,26 @@
+# Build output
+**/bin/
+**/obj/
+
+# Local .NET and tooling caches
+.dotnet/
+.nuget/
+.templateengine/
+
+# Codex/local workspace state
+.agents/
+.codex/
+work/
+
+# User/application state
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Debug symbols and logs
+*.pdb
+*.log
+
+# Release artifacts are uploaded to GitHub Releases, not committed to git.
+outputs/
